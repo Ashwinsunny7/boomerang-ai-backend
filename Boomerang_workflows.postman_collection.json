@@ -1,0 +1,135 @@
+{
+    "info": {
+        "name": "Boomerang Workflow Engine - Local",
+        "_postman_id": "a8c2a6c0-3bd4-4a5a-9b0a-000000000001",
+        "description": "End-to-end tests for the NestJS workflow engine (workflows, triggers, runs, logs).",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:4000"
+        },
+        {
+            "key": "runId",
+            "value": ""
+        }
+    ],
+    "item": [
+        {
+            "name": "Workflows - Create Lead Demo (fast waits)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": "{{baseUrl}}/workflows",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"id\": \"lead-demo\",\n  \"name\": \"Lead Demo (fast waits)\",\n  \"triggerRule\": {\n    \"and\": [\n      { \"==\": [ { \"var\": \"lead.source\" }, \"LinkedIn\" ] },\n      { \">\":  [ { \"var\": \"lead.score\" }, 75 ] }\n    ]\n  },\n  \"graph\": {\n    \"nodes\": [\n      {\"id\":\"n1\",\"type\":\"NOTIFY\",\"name\":\"Notify AE\",\"config\":{\"channel\":\"console\",\"msg\":\"Hot lead {{lead.name}} ({{lead.email}})\"}},\n      {\"id\":\"n2\",\"type\":\"WAIT\",\"name\":\"Wait 3s\",\"config\":{\"seconds\":3}},\n      {\"id\":\"n3\",\"type\":\"EMAIL\",\"name\":\"Follow-up\",\"config\":{\"to\":\"{{lead.email}}\",\"subject\":\"Hi {{lead.name}}\",\"body\":\"Checking in!\"}},\n      {\"id\":\"n4\",\"type\":\"IF\",\"name\":\"Is CEO?\",\"config\":{\"rule\":{\"in\":[\"CEO\",{\"var\":\"lead.title\"}]}}},\n      {\"id\":\"n5\",\"type\":\"API_CALL\",\"name\":\"Gifting\",\"config\":{\"method\":\"POST\",\"url\":\"https://httpbin.org/post\",\"bodyTemplate\":\"{\\\"lead\\\":\\\"{{lead.email}}\\\",\\\"gift\\\":\\\"mug\\\"}\"}},\n      {\"id\":\"n6\",\"type\":\"API_CALL\",\"name\":\"Drip\",\"config\":{\"method\":\"POST\",\"url\":\"https://httpbin.org/post\",\"bodyTemplate\":\"{\\\"campaign\\\":\\\"dripA\\\",\\\"to\\\":\\\"{{lead.email}}\\\"}\"}}\n    ],\n    \"edges\": [\n      {\"id\":\"e1\",\"source\":\"n1\",\"target\":\"n2\"},\n      {\"id\":\"e2\",\"source\":\"n2\",\"target\":\"n3\"},\n      {\"id\":\"e3\",\"source\":\"n3\",\"target\":\"n4\"},\n      {\"id\":\"e4\",\"source\":\"n4\",\"target\":\"n5\",\"predicate\":\"then\"},\n      {\"id\":\"e5\",\"source\":\"n4\",\"target\":\"n6\",\"predicate\":\"else\"}\n    ]\n  }\n}"
+                }
+            }
+        },
+        {
+            "name": "Events - Trigger Lead Ingestion (fires lead-demo)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": "{{baseUrl}}/events/leads",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"lead\": { \"source\": \"LinkedIn\", \"score\": 92, \"name\": \"Anita\", \"email\": \"a@ex.com\", \"title\": \"CEO\" }\n}"
+                }
+            }
+        },
+        {
+            "name": "Runs - List (filter by workflowId=lead-demo)",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/runs?workflowId=lead-demo"
+            }
+        },
+        {
+            "name": "Runs - Get by ID",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/runs/{{runId}}"
+            }
+        },
+        {
+            "name": "Runs - Logs by ID",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/runs/{{runId}}/logs"
+            }
+        },
+        {
+            "name": "Workflows - Create Temp Demo (fast waits)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": "{{baseUrl}}/workflows",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"id\":\"temp-demo\",\n  \"name\":\"Temp Demo (fast waits)\",\n  \"graph\":{\n    \"nodes\":[\n      {\"id\":\"t1\",\"type\":\"API_CALL\",\"name\":\"Turn on AC\",\"config\":{\"method\":\"POST\",\"url\":\"https://httpbin.org/post\",\"bodyTemplate\":\"{\\\"ac\\\":\\\"on\\\"}\"}},\n      {\"id\":\"t2\",\"type\":\"WAIT\",\"name\":\"Wait 3s\",\"config\":{\"seconds\":3}},\n      {\"id\":\"t3\",\"type\":\"IF\",\"name\":\"Still >30?\",\"config\":{\"rule\":{\">\":[{\"var\":\"sensor.tempC\"},30]}}},\n      {\"id\":\"t4\",\"type\":\"NOTIFY\",\"name\":\"Notify Manager\",\"config\":{\"channel\":\"console\",\"msg\":\"Temp still high; pinging manager\"}},\n      {\"id\":\"t5\",\"type\":\"WAIT\",\"name\":\"Wait 4s\",\"config\":{\"seconds\":4}},\n      {\"id\":\"t6\",\"type\":\"IF\",\"name\":\"Manager ack?\",\"config\":{\"rule\":{\"==\":[{\"var\":\"manager.ack\"},true]}}},\n      {\"id\":\"t7\",\"type\":\"API_CALL\",\"name\":\"Backup Cooling\",\"config\":{\"method\":\"POST\",\"url\":\"https://httpbin.org/post\",\"bodyTemplate\":\"{\\\"backup\\\":\\\"on\\\"}\"}}\n    ],\n    \"edges\":[\n      {\"id\":\"te1\",\"source\":\"t1\",\"target\":\"t2\"},\n      {\"id\":\"te2\",\"source\":\"t2\",\"target\":\"t3\"},\n      {\"id\":\"te3\",\"source\":\"t3\",\"target\":\"t4\",\"predicate\":\"then\"},\n      {\"id\":\"te4\",\"source\":\"t3\",\"target\":\"t6\",\"predicate\":\"else\"},\n      {\"id\":\"te5\",\"source\":\"t4\",\"target\":\"t5\"},\n      {\"id\":\"te6\",\"source\":\"t5\",\"target\":\"t6\"},\n      {\"id\":\"te7\",\"source\":\"t6\",\"target\":\"t7\",\"predicate\":\"else\"}\n    ]\n  }\n}"
+                }
+            }
+        },
+        {
+            "name": "Runs - Start Temp Demo (returns runId)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": "{{baseUrl}}/runs/temp-demo/start",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"input\": {\n    \"sensor\": {\"tempC\": 33},\n    \"manager\": {\"ack\": false}\n  }\n}"
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "let json = {};\n",
+                            "try { json = pm.response.json(); } catch (e) {}\n",
+                            "if (json && json.id) {\n",
+                            "  pm.collectionVariables.set('runId', json.id);\n",
+                            "  console.log('Saved runId:', json.id);\n",
+                            "} else if (json && typeof json === 'string') {\n",
+                            "  pm.collectionVariables.set('runId', json);\n",
+                            "  console.log('Saved runId:', json);\n",
+                            "}"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Runs - Logs for last started run (uses {{runId}})",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/runs/{{runId}}/logs"
+            }
+        }
+    ]
+}

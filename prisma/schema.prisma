@@ -1,0 +1,52 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum RunStatus { 
+  PENDING 
+  RUNNING 
+  SUCCESS 
+  FAILED 
+  CANCELLED 
+  }
+
+model Workflow {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  graph        Json     // { nodes: [], edges: [] }
+  triggerRule  Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  runs         Run[]
+}
+
+model Run {
+  id            String   @id @default(cuid())
+  workflowId    String
+  status        RunStatus @default(PENDING)
+  input         Json?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  currentNodeId String?
+  logs          Log[]
+  workflow      Workflow  @relation(fields: [workflowId], references: [id])
+  @@index([workflowId])
+}
+
+model Log {
+  id      String   @id @default(cuid())
+  runId   String
+  nodeId  String?
+  level   String
+  message String
+  details Json?
+  ts      DateTime @default(now())
+  run     Run      @relation(fields: [runId], references: [id])
+  @@index([runId])
+}
