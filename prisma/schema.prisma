@@ -50,3 +50,16 @@ model Log {
   run     Run      @relation(fields: [runId], references: [id])
   @@index([runId])
 }
+
+model ActionKind {
+  id           String   @id @default(cuid())
+  key          String   @unique   // e.g., "SLACK_POST", "SENDGRID_EMAIL"
+  name         String
+  executor     String             // "HTTP" | "WAIT" | "IF" | "EMAIL" | "LLM_CHAT" | "WEBHOOK" | ...
+  schemaJson   Json               // JSON Schema for config validation
+  uiSchemaJson Json?              // Optional UI hints for the form
+  defaultsJson Json?              // Default config for new node instance
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+

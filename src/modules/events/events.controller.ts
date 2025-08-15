@@ -2,6 +2,7 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as jsonLogic from 'json-logic-js';
 import { EngineService } from '../engine/engine.service';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 @Controller('events')
 export class EventsController {
@@ -25,6 +26,35 @@ export class EventsController {
                 }
             })
         );
+        return { triggered };
+    }
+
+    @Post('sensors')
+    async ingestSensor(@Body() payload: any) {
+        // payload example: { sensor: { tempC: 33 }, manager?: { ack?: boolean } }
+
+        const flows = await this.prisma.workflow.findMany({
+            where: {
+                // “not DB NULL” => means the column actually contains JSON
+                triggerRule: { not: Prisma.DbNull },
+            },
+            select: { id: true, triggerRule: true },
+        });
+
+        const triggered: string[] = [];
+
+        for (const f of flows) {
+            try {
+                // triggerRule is Prisma.JsonValue | null; safe-cast for json-logic
+                if (jsonLogic.apply(f.triggerRule as any, payload)) {
+                    await this.engine.startRun(f.id, payload);
+                    triggered.push(f.id);
+                }
+            } catch {
+                // ignore malformed rules
+            }
+        }
+
         return { triggered };
     }
 }

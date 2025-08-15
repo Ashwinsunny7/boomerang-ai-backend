@@ -7,6 +7,9 @@ import { EngineModule } from './modules/engine/engine.module';
 import { WorkflowsModule } from './modules/workflows/workflows.module';
 import { RunsModule } from './modules/runs/runs.module';
 import { EventsModule } from './modules/events/events.module';
+import { ActionsService } from './modules/actions/actions.service';
+import { ActionsController } from './modules/actions/actions.controller';
+import { ActionsModule } from './modules/actions/actions.module';
 
 @Module({
   imports: [
@@ -17,7 +20,9 @@ import { EventsModule } from './modules/events/events.module';
     WorkflowsModule,
     RunsModule,
     EventsModule,
+    ActionsModule,
   ],
-  providers: [WsGateway],
+  providers: [WsGateway, ActionsService],
+  controllers: [ActionsController],
 })
 export class AppModule { }
